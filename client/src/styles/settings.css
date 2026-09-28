@@ -1,0 +1,329 @@
+/* ==========================================================================
+   Settings Styles - StaffPulse EMS
+   ========================================================================== */
+
+.settings-container {
+  display: flex;
+  gap: 2rem;
+  max-width: 1050px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.settings-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+}
+
+.settings-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-content {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.settings-header {
+  margin-bottom: 2rem;
+}
+
+.settings-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--slate-900);
+  letter-spacing: -0.02em;
+}
+
+.settings-subtitle {
+  font-size: 0.9rem;
+  color: var(--slate-500);
+  margin-top: 0.25rem;
+}
+
+/* Vertical Stack Sections */
+.settings-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.settings-card {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem 2rem;
+  box-shadow: var(--shadow-xs);
+}
+
+.settings-card-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--slate-100);
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.settings-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--primary-50);
+  color: var(--primary-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.settings-card-title-group h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--slate-900);
+}
+
+.settings-card-title-group p {
+  font-size: 0.825rem;
+  color: var(--slate-500);
+  margin-top: 0.15rem;
+}
+
+/* Two Column Form Grid */
+.settings-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem 1.5rem;
+}
+
+.settings-form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.settings-label {
+  display: block;
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: var(--slate-700);
+  margin-bottom: 0.4rem;
+}
+
+.settings-input,
+.settings-select,
+.settings-textarea {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--slate-200);
+  background-color: var(--card-bg, #ffffff);
+  color: var(--slate-800);
+  font-size: 0.875rem;
+  transition: all var(--transition-fast);
+}
+
+.settings-input:focus,
+.settings-select:focus,
+.settings-textarea:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.settings-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Appearance & Theme Cards Selection */
+.theme-selector-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.theme-card-option {
+  border: 2px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  cursor: pointer;
+  background: var(--card-bg, #ffffff);
+  transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  position: relative;
+}
+
+.theme-card-option:hover {
+  border-color: var(--primary-300);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-card-option.selected {
+  border-color: var(--primary-600);
+  background: var(--primary-50);
+}
+
+.theme-card-preview {
+  height: 90px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--slate-200);
+  overflow: hidden;
+  display: flex;
+}
+
+.theme-preview-sidebar {
+  width: 30%;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.theme-preview-content {
+  flex: 1;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.theme-preview-bar {
+  height: 8px;
+  border-radius: 4px;
+}
+
+/* Light Theme Preview Mockup */
+.preview-light .theme-preview-sidebar {
+  background: #ffffff;
+}
+.preview-light .theme-preview-content {
+  background: var(--slate-50, #faf8f5);
+}
+.preview-light .bar-primary {
+  background: var(--primary-500, #e85d04);
+  width: 60%;
+}
+.preview-light .bar-slate {
+  background: #e2e8f0;
+  width: 85%;
+}
+
+/* Dark Theme Preview Mockup */
+.preview-dark .theme-preview-sidebar {
+  background: #111827;
+}
+.preview-dark .theme-preview-content {
+  background: #0b0f19;
+}
+.preview-dark .bar-primary {
+  background: var(--primary-500, #e85d04);
+  width: 60%;
+}
+.preview-dark .bar-slate {
+  background: #1f2937;
+  width: 85%;
+}
+
+.theme-card-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.theme-card-label {
+  font-size: 0.925rem;
+  font-weight: 700;
+  color: var(--slate-800);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.theme-card-desc {
+  font-size: 0.775rem;
+  color: var(--slate-500);
+}
+
+/* Sticky / Bottom Save Action Bar */
+.settings-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding-top: 1rem;
+}
+
+.settings-btn-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.75rem;
+  border-radius: var(--radius-md);
+  background: var(--primary-gradient);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(232, 93, 4, 0.2);
+  transition: all var(--transition-fast);
+}
+
+.settings-btn-save:hover:not(:disabled) {
+  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(232, 93, 4, 0.3);
+}
+
+.settings-btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 860px) {
+  .settings-container {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .settings-sidebar {
+    width: 100%;
+  }
+
+  .settings-tabs {
+    flex-direction: row;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    padding-bottom: 0.5rem;
+  }
+
+  .settings-tabs button {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .settings-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .theme-selector-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-card {
+    padding: 1.25rem 1rem;
+  }
+
+  .settings-actions-bar {
+    justify-content: stretch;
+  }
+
+  .settings-btn-save {
+    width: 100%;
+    justify-content: center;
+  }
+}
