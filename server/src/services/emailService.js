@@ -1,62 +1,135 @@
-import nodemailer from 'nodemailer';
+import { BrevoClient } from '@getbrevo/brevo';
 
 /**
- * Singleton transporter instance
+ * Singleton BrevoClient instance
  */
-let transporter = null;
+let brevoClient = null;
 
 /**
- * Initialize or get Nodemailer transporter using environment variables
+ * Initialize or get BrevoClient using environment variables
  */
-export const getTransporter = () => {
-  if (transporter) {
-    return transporter;
+export const getBrevoClient = () => {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey || apiKey.trim() === '') {
+    return null;
   }
 
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT) || 587;
-  const user = process.env.SMTP_USER || process.env.SMTP_EMAIL;
-  const pass = process.env.SMTP_PASSWORD || process.env.SMTP_PASS;
-
-  // If credentials are provided, create production SMTP transport
-  if (host && user && pass) {
-    transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465, // true for port 465, false for port 587 / other ports
-      auth: {
-        user,
-        pass,
-      },
-      tls: {
-        rejectUnauthorized: process.env.NODE_ENV === 'production',
-      },
-    });
+  if (!brevoClient) {
+    brevoClient = new BrevoClient({ apiKey: apiKey.trim() });
   }
 
-  return transporter;
+  return brevoClient;
 };
 
 /**
- * Verify SMTP connection on startup without leaking secrets
+ * Reset client singleton (useful for testing and configuration changes)
  */
-export const verifySmtpConnection = async () => {
-  const currentTransporter = getTransporter();
+export const resetBrevoClient = () => {
+  brevoClient = null;
+};
 
-  if (!currentTransporter) {
-    console.log('[Email] SMTP is not fully configured (check SMTP_HOST, SMTP_USER, SMTP_PASSWORD in .env).');
+/**
+ * Verify Brevo API connection / credentials on startup without leaking secrets
+ */
+export const verifyEmailService = async () => {
+  const client = getBrevoClient();
+
+  if (!client) {
+    console.log('[Email Service] Brevo HTTPS API key not set (set BREVO_API_KEY in .env for live email delivery).');
     return false;
   }
 
   try {
-    await currentTransporter.verify();
-    console.log('[Email] SMTP connection verified.');
+    if (client.account && typeof client.account.getAccount === 'function') {
+      await client.account.getAccount();
+      console.log('[Email Service] Brevo HTTPS Transactional Email API verified.');
+      return true;
+    }
+    console.log('[Email Service] Brevo API client initialized.');
     return true;
   } catch (error) {
     // Log safe error without exposing credentials or internal details
-    const safeError = error?.message?.split('\n')[0] || 'Connection failed';
-    console.error(`[Email] SMTP connection failed: ${safeError}`);
+    const safeError = error?.body?.message || error?.message?.split('\n')[0] || 'Verification failed';
+    console.warn(`[Email Service] Brevo API verification check: ${safeError}`);
     return false;
+  }
+};
+
+/**
+ * Backward compatibility alias for startup checks
+ */
+export const verifySmtpConnection = verifyEmailService;
+
+/**
+ * Send an email via Brevo HTTPS Transactional Email API (POST https://api.brevo.com/v3/smtp/email)
+ * @param {Object} options - { to, toName, subject, html, text }
+ */
+export const sendEmail = async ({ to, toName, subject, html, text }) => {
+  const client = getBrevoClient();
+
+  const fromEmail = process.env.BREVO_FROM_EMAIL || 'noreply@staffpulse.internal';
+  const fromName = process.env.BREVO_FROM_NAME || 'StaffPulse';
+
+  const recipientEmail = typeof to === 'string' ? to.trim() : to?.email?.trim();
+  const recipientName = toName || (typeof to === 'object' && to?.name) || recipientEmail.split('@')[0];
+
+  if (!recipientEmail) {
+    return {
+      success: false,
+      delivered: false,
+      error: 'Recipient email is required',
+    };
+  }
+
+  // If Brevo API key is not configured, handle safely in development/test
+  if (!client) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Email Service] Simulated send to ${recipientEmail} (Subject: "${subject}")`);
+    }
+    return {
+      success: true,
+      delivered: false,
+      simulated: true,
+      message: 'Brevo API key not configured; simulated email handled safely.',
+    };
+  }
+
+  try {
+    const payload = {
+      sender: {
+        email: fromEmail,
+        name: fromName,
+      },
+      to: [
+        {
+          email: recipientEmail,
+          name: recipientName,
+        },
+      ],
+      subject: subject || 'Notification from StaffPulse',
+      htmlContent: html,
+      textContent: text || (html ? html.replace(/<[^>]*>?/gm, '').trim() : ''),
+    };
+
+    const response = await client.transactionalEmails.sendTransacEmail(payload);
+
+    console.log(`[Email Service] Transactional email sent successfully via Brevo HTTPS API to ${recipientEmail}`);
+
+    return {
+      success: true,
+      delivered: true,
+      messageId: response?.messageId || response?.messageIds?.[0] || 'sent',
+    };
+  } catch (error) {
+    // Log safe server-side diagnostic error without exposing API key
+    const safeError = error?.body?.message || error?.message?.split('\n')[0] || 'Brevo API transmission error';
+    console.error(`[Email Service] Brevo HTTPS API error while sending to ${recipientEmail}: ${safeError}`);
+
+    return {
+      success: false,
+      delivered: false,
+      error: safeError,
+    };
   }
 };
 
@@ -65,11 +138,6 @@ export const verifySmtpConnection = async () => {
  * @param {Object} options - { to, name, otp, expiresInMinutes }
  */
 export const sendPasswordResetEmail = async ({ to, name, otp, expiresInMinutes = 10 }) => {
-  const currentTransporter = getTransporter();
-  const fromName = process.env.SMTP_FROM_NAME || 'StaffPulse';
-  const fromAddress = process.env.SMTP_FROM || 'noreply@staffpulse.internal';
-  const from = `"${fromName}" <${fromAddress}>`;
-
   const recipientName = name || 'StaffPulse User';
   const subject = 'StaffPulse Password Reset Code';
 
@@ -188,50 +256,97 @@ StaffPulse
 HR Management
 `;
 
-  // If SMTP is not configured, safely handle in development
-  if (!currentTransporter) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Email] SMTP not configured. Simulated password reset email to: ${to}`);
-    }
-    return {
-      success: true,
-      delivered: false,
-      simulated: true,
-      message: 'SMTP not configured; simulated email handled safely.',
-    };
-  }
+  return await sendEmail({
+    to,
+    toName: recipientName,
+    subject,
+    html: htmlContent,
+    text: textContent,
+  });
+};
 
-  try {
-    const info = await currentTransporter.sendMail({
-      from,
-      to,
-      subject,
-      text: textContent,
-      html: htmlContent,
-    });
+/**
+ * Send Welcome Email to Newly Created Employees/Managers
+ * @param {Object} options - { to, name, role, department }
+ */
+export const sendWelcomeEmail = async ({ to, name, role, department }) => {
+  const recipientName = name || 'Team Member';
+  const roleName = role ? role.charAt(0).toUpperCase() + role.slice(1) : 'Employee';
+  const deptName = department || 'General';
+  const subject = 'Welcome to StaffPulse HR Management';
 
-    console.log(`[Email] Password reset email sent successfully to ${to}`);
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to StaffPulse</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 28px 12px; color: #1e293b;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width: 540px; background-color: #ffffff; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0;" cellspacing="0" cellpadding="0" border="0">
+          <tr>
+            <td style="background-color: #050506; padding: 26px 32px; border-bottom: 2px solid #FF5A1F;">
+              <span style="font-size: 22px; font-weight: 800; color: #ffffff;">Staff<span style="color: #FF5A1F;">Pulse</span></span>
+              <div style="font-size: 10px; font-weight: 600; color: #94a3b8; letter-spacing: 1.5px; text-transform: uppercase;">HR Management</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 36px 32px 28px 32px;">
+              <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0;">Welcome to the Team, ${recipientName}!</h2>
+              <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 16px 0;">
+                Your StaffPulse account has been set up successfully for the <strong>${deptName}</strong> department as <strong>${roleName}</strong>.
+              </p>
+              <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 24px 0;">
+                You can now sign in to your dashboard to manage your attendance, tasks, leaves, and professional documents.
+              </p>
+              <p style="font-size: 14px; line-height: 1.5; color: #334155; margin: 24px 0 0 0;">
+                Best regards,<br>
+                <strong style="color: #0f172a;">StaffPulse Team</strong>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
+              <p style="font-size: 12px; color: #94a3b8; margin: 0;">&copy; ${new Date().getFullYear()} StaffPulse. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
 
-    return {
-      success: true,
-      delivered: true,
-      messageId: info.messageId,
-    };
-  } catch (error) {
-    // Log safe server-side error without exposing credentials
-    const safeError = error?.message?.split('\n')[0] || 'Email transmission error';
-    console.error(`[Email] Failed to send password reset email to ${to}: ${safeError}`);
+  const textContent = `
+Welcome to StaffPulse!
 
-    return {
-      success: false,
-      delivered: false,
-      error: safeError,
-    };
-  }
+Hello ${recipientName},
+
+Your StaffPulse account has been set up successfully for the ${deptName} department as ${roleName}.
+
+Best regards,
+StaffPulse Team
+`;
+
+  return await sendEmail({
+    to,
+    toName: recipientName,
+    subject,
+    html: htmlContent,
+    text: textContent,
+  });
 };
 
 export default {
-  getTransporter,
+  getBrevoClient,
+  verifyEmailService,
   verifySmtpConnection,
+  sendEmail,
   sendPasswordResetEmail,
+  sendWelcomeEmail,
 };

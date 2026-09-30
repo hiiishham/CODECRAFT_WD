@@ -510,7 +510,7 @@ export const forgotPassword = async (req, res, next) => {
       user.resetPasswordCooldown = new Date(Date.now() + 60 * 1000); // 60s cooldown
       await user.save();
 
-      // Send OTP via email (production SMTP or safe dev fallback)
+      // Send OTP via email (Brevo HTTPS API or safe dev fallback)
       const emailResult = await sendPasswordResetEmail({
         to: user.email,
         name: user.name,

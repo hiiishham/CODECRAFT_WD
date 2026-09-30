@@ -54,11 +54,15 @@ app.disable('x-powered-by');
 // Database Connection
 if (process.env.NODE_ENV !== 'test') {
   connectDB();
-  // Verify SMTP connection on backend startup
-  import('./services/emailService.js').then(({ verifySmtpConnection }) => {
-    verifySmtpConnection();
+  // Verify Brevo HTTPS API service on backend startup
+  import('./services/emailService.js').then(({ verifyEmailService, verifySmtpConnection }) => {
+    if (typeof verifyEmailService === 'function') {
+      verifyEmailService();
+    } else if (typeof verifySmtpConnection === 'function') {
+      verifySmtpConnection();
+    }
   }).catch((err) => {
-    console.error('[Email] Failed to initialize email service:', err.message);
+    console.error('[Email Service] Failed to initialize email service:', err.message);
   });
 }
 
